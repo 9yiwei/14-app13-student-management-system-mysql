@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QApplication, QPushButton, QMainWindow, QTableWidget, QTableWidgetItem, QDialog,\
-     QVBoxLayout, QLineEdit, QComboBox, QToolBar
+     QVBoxLayout, QLineEdit, QComboBox, QToolBar, QStatusBar
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QIcon
 import sqlite3
@@ -9,14 +9,18 @@ import sys
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        # 調整應用程式窗口
         self.setWindowTitle("Student Management system")
         self.setFixedWidth(700)
         self.setFixedHeight(500)
 
+        # 創造菜單
         file_menu_item = self.menuBar().addMenu("&File")
         help_menu_item = self.menuBar().addMenu("&Help")
         edit_menu_item = self.menuBar().addMenu("&Edit")
 
+        # 新增菜單選項
         add_student_action = QAction(QIcon("icons/add.png"), "Add Student", self)
         add_student_action.triggered.connect(self.insert)
         file_menu_item.addAction(add_student_action)
@@ -28,18 +32,50 @@ class MainWindow(QMainWindow):
         edit_menu_item.addAction(search_action)
         search_action.triggered.connect(self.search)
 
+        # 創造資料table
         self.table = QTableWidget()
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(("Id", "Name", "Course", "Mobile"))
         self.table.verticalHeader().setVisible(False)
         self.setCentralWidget(self.table)
 
+        # 創造工具列表
         toolbar = QToolBar()
         toolbar.setMovable(True)
         self.addToolBar(toolbar)
 
+        # 新增工具列表
         toolbar.addAction(add_student_action)
         toolbar.addAction(search_action)
+
+        # 創造狀態欄
+        self.statusbar = QStatusBar()
+        self.setStatusBar(self.statusbar)
+
+        # 檢測是否有點擊資料欄
+        self.table.cellClicked.connect(self.cell_clicked)
+
+    def cell_clicked(self):
+        edit_button = QPushButton("Edit Records")
+        edit_button.clicked.connect(self.edit)
+
+        delete_button = QPushButton("Delete Records")
+        delete_button.clicked.connect(self.delete)
+
+        children = self.findChildren(QPushButton)
+        if children:
+            for child in children:
+                self.statusbar.removeWidget(child)
+
+        self.statusbar.addWidget(edit_button)
+        self.statusbar.addWidget(delete_button)
+    def edit(self):
+        dialog = EditDialog()
+        dialog.exec()
+
+    def delete(self):
+        dialog = DeleteDialog()
+        dialog.exec()
 
     def load_data(self):
         connect = sqlite3.connect("database.db")
@@ -60,15 +96,24 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
 
+class EditDialog(QDialog):
+    pass
+
+
+class DeleteDialog(QDialog):
+    pass
+
 class InsertDialog(QDialog):
     def __init__(self):
         super().__init__()
+        # 調整應用程式窗口
         self.setWindowTitle("Insert Student Data")
         self.setFixedWidth(300)
         self.setFixedHeight(300)
 
         layout = QVBoxLayout()
 
+        # 創造插入資料彈出視窗選項
         self.student_name = QLineEdit()
         self.student_name.setPlaceholderText("Name")
         layout.addWidget(self.student_name)
@@ -103,12 +148,14 @@ class InsertDialog(QDialog):
 class SearchDialog(QDialog):
     def __init__(self):
         super().__init__()
+        # 調整應用程式窗口
         self.setWindowTitle("Search Students")
         self.setFixedWidth(300)
         self.setFixedHeight(300)
 
         layout = QVBoxLayout()
 
+        # 創造搜尋資料彈出視窗選項
         self.student_name = QLineEdit()
         self.student_name.setPlaceholderText("Name")
         layout.addWidget(self.student_name)
