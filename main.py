@@ -2,16 +2,22 @@ from PyQt6.QtWidgets import QApplication, QPushButton, QMainWindow, QTableWidget
      QVBoxLayout, QLineEdit, QComboBox, QToolBar, QStatusBar, QGridLayout, QLabel, QMessageBox
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QIcon
-import sqlite3
+import mysql.connector
 import sys
 
 
 class DatabaseConnect:
-    def __init__(self, database_file="database.db"):
-        self.database_file = database_file
+    def __init__(self, host="localhost", user="root", password="PYTHONCOURSE", database="school"):
+        self.host = host
+        self.user = user
+        self.password = password
+        self.database = database
 
     def connection(self):
-        connection = sqlite3.connect(self.database_file)
+        connection = mysql.connector.connect(host=self.host,
+                                             user=self.user,
+                                             password=self.password,
+                                             database=self.database)
         return connection
 
 
@@ -37,7 +43,6 @@ class MainWindow(QMainWindow):
         about_action = QAction("About", self)
         about_action.triggered.connect(self.about)
         help_menu_item.addAction(about_action)
-
 
         search_action = QAction(QIcon("icons/search.png"), "Search", self)
         edit_menu_item.addAction(search_action)
@@ -80,6 +85,7 @@ class MainWindow(QMainWindow):
 
         self.statusbar.addWidget(edit_button)
         self.statusbar.addWidget(delete_button)
+
     def edit(self):
         dialog = EditDialog()
         dialog.exec()
@@ -90,7 +96,9 @@ class MainWindow(QMainWindow):
 
     def load_data(self):
         connection = DatabaseConnect().connection()
-        result = connection.execute("SELECT * FROM students")
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM students")
+        result = cursor.fetchall()
         self.table.setRowCount(0)
         for row_number, row_data in enumerate(result):
             self.table.insertRow(row_number)
@@ -165,7 +173,7 @@ class EditDialog(QDialog):
     def update_student(self):
         connection = DatabaseConnect().connection()
         cursor = connection.cursor()
-        cursor.execute("UPDATE students SET name = ?, course = ?, mobile = ? WHERE id = ?",
+        cursor.execute("UPDATE students SET name = %s, course = %s, mobile = %s WHERE id = %s",
                        (self.student_name.text(),
                         self.course_name.itemText(self.course_name.currentIndex()),
                         self.mobile.text(),
@@ -174,6 +182,8 @@ class EditDialog(QDialog):
         cursor.close()
         connection.close()
         main_window.load_data()
+
+
 class DeleteDialog(QDialog):
     def __init__(self):
         super().__init__()
@@ -191,6 +201,7 @@ class DeleteDialog(QDialog):
         self.setLayout(layout)
 
         yes.clicked.connect(self.delete_student)
+
     def delete_student(self):
         # 獲得當前鼠標學生姓名
         index = main_window.table.currentRow()
@@ -198,7 +209,7 @@ class DeleteDialog(QDialog):
         student_id = main_window.table.item(index, 0).text()
         connection = DatabaseConnect().connection()
         cursor = connection.cursor()
-        cursor.execute("DELETE from students WHERE id = ?", (student_id,))
+        cursor.execute("DELETE from students WHERE id = %s", (student_id,))
         connection.commit()
         cursor.close()
         connection.close()
@@ -247,7 +258,7 @@ class InsertDialog(QDialog):
         mobile = self.mobile.text()
         connection = DatabaseConnect().connection()
         cursor = connection.cursor()
-        cursor.execute("INSERT INTO students (name, course, mobile) VALUES (?, ?, ?)", (name, course, mobile))
+        cursor.execute("INSERT INTO students (name, course, mobile) VALUES (%s, %s, %s)", (name, course, mobile))
         connection.commit()
         cursor.close()
         connection.close()
@@ -277,9 +288,10 @@ class SearchDialog(QDialog):
 
     def search(self):
         name = self.student_name.text()
-        connection = connection = DatabaseConnect().connection()
+        connection = DatabaseConnect().connection()
         cursor = connection.cursor()
-        result = cursor.execute("SELECT * FROM students WHERE name = ?", (name,))
+        cursor.execute("SELECT * FROM students WHERE name = %s", (name,))
+        result = cursor.fetchall()
         rows = list(result)
         print(rows)
 
